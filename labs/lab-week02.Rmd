@@ -1,0 +1,75 @@
+---
+title: "Week 2 Lab, MAST20005/MAST90058"
+author: "School of Mathematics and Statistics, University of Melbourne"
+date: "Semester 2, 2022"
+institute: "University of Melbourne"
+fontsize: 11pt
+classoption: a4paper
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+---
+
+**Goals:** (i) Getting started with R and RStudio; (ii) Basic exploratory data
+analyses; (iii) Basic graphics.
+
+
+# R introduction and reference
+
+This guide is available online at:  
+<https://mathstats.pages.gitlab.unimelb.edu.au/r-reference/>
+
+This online guide is much longer than the usual weekly lab notes. You are not
+expected to absorb it completely in a single lab session.  We suggest you skim
+it upon first reading and ensure you set aside **at least 15 minutes** to work
+through the lab exercises at the end of your first lab class, referring back to
+the online guide when required.
+
+
+# Exercises
+
+1. Calculate $\sum_{i=1}^{100} \ln(i)$.
+```{r }
+# Insert answer here...
+```
+
+2. Let $X \sim \mathrm{N}(1, 2)$.  What is $\mathbb{E}(X^2)$?  Approximate this
+by simulating a large number of normal random variables and doing an appropriate calculation.
+```{r }
+# Insert answer here...
+```
+
+3. Use the help system to find out what the `qnorm()` function does. Explain
+the result of running `qnorm(0.1)`.  What about `qnorm(0.1, lower.tail
+= FALSE)`?  For what value of `a` will the command `qnorm(a)` return the same
+value as the previous one?
+```{r }
+# Insert answer here...
+```
+
+4. Write a function `exp1pdf()` that calculates the pdf of an exponential
+distribution with mean 1.  Compare the output of your function against the
+in-built function that does the same calculation (`dexp()`).  Remember to check
+it works for all inputs: for example, what is the correct value of
+`exp1pdf(-1)`?
+```{r }
+# Insert answer here...
+```
+
+5. Do question 6(c) from the tutorial problems.
+```{r }
+# Insert answer here...
+```
+
+6. Do question 7(b) from the tutorial problems.
+```{r }
+# Insert answer here...
+```
+
+7. Do question 2(c) from the tutorial problems by simulation (rather than using
+the Central Limit Theorem).
+```{r }
+# Insert answer here...
+```

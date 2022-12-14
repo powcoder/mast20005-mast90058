@@ -1,0 +1,314 @@
+---
+title: "Week 4 Lab, MAST20005/MAST90058"
+author: "School of Mathematics and Statistics, University of Melbourne"
+date: "Semester 2, 2022"
+institute: "University of Melbourne"
+fontsize: 11pt
+classoption: a4paper
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+---
+
+**Goals:** (i) Compute and interpret confidence intervals; (ii) Assess
+properties of estimators using numerical simulations.
+
+**Data for the [Confidence intervals] section:** Weight of primary tumour in
+mice (`PTweight.txt`).  Observations represent measurements on primary tumour
+weight (in micro-grams) in mice randomly assigned to stress and control groups.
+Measurements are taken after a follow-up period. The goal of the study is to
+compare tumour development in the two groups of mice.  (Data source: Sloan
+Biology Lab, Monash University)
+
+**Data for the [Comparing estimators by simulation] section:** Ivadopodia data
+(`invadopodia.txt`). Invadopodia are protrusions in cells which are often
+associated with cancer invasiveness and metastasis. The first dataset consists
+of counts for the number of cells susceptible of invadopodia development from
+mice tissue samples. The first column (`Condition`) denotes treatment group (1
+= no treatment, 2 = isopropile (iso), 3 = propile (pro), 4 = iso + pro), while
+the second column (`Total`) denotes cell counts.  (Data source: Sloan Biology
+Lab, Monash University)
+
+```{r echo=FALSE}
+set.seed(2253)
+```
+
+# Confidence intervals
+
+While constructing confidence intervals, we will often use R to find quantiles
+of common distributions, including $\chi^2$-, $t$- and $F$-distributions.  For
+each of the following distributions, find the 0.9, 0.95 and 0.975 quantiles.
+
+1. Standard normal, $\mathrm{N}(0, 1)$
+```{r }
+p <- c(0.9, 0.95, 0.975)
+qnorm(p)
+```
+
+2. $\mathrm{N}(5, 3^2)$
+```{r eval=FALSE}
+qnorm(p, 5, 3)
+```
+
+3. $t_5$
+```{r eval=FALSE}
+qt(p, 5)
+```
+
+4. $\chi_1^2$
+```{r eval=FALSE}
+qchisq(p, 1)
+```
+
+5. $\chi_5^2$
+```{r eval=FALSE}
+# your turn...
+```
+
+6. $\mathrm{F}_{12, 4}$
+```{r eval=FALSE}
+qf(p, 12, 4)
+```
+
+Load the primary tumour data into a data frame called `PTweight` (how?). Find
+an approximate 90\% confidence interval for the mean tumour weight in the
+control group.
+```{r echo=FALSE}
+PTweight <- read.table("PTweight.txt")
+```
+```{r }
+x <- PTweight[1:5, 2]
+n <- length(x)
+x.bar <- mean(x)
+s <- sd(x)
+t <- qt(0.95, n - 1)
+x.bar + c(-1, 1) * t * s / sqrt(n)
+```
+Notice that in the last line the vector $(-1,1)$ is multiplied and added to
+scalars.  This produces a two-element vector corresponding to $\bar{x} \pm
+t_{n-1}^{-1}(0.05) s / \sqrt{n}$.  Next compare your result with the in-built
+function `t.test()`.
+```{r }
+t.test(x, conf.level = 0.90)
+```
+The last command is what we use in practice. We will look at the hypothesis
+testing part of the output later in the course.
+
+Construct a 95\% confidence interval for the difference of means $\mu_X
+- \mu_Y$ in the case and control groups. Can you conclude that stress and
+tumour growth are associated?  (Assume equal variances in the two groups,
+i.e.\ $\sigma^2_X = \sigma_Y^2$)
+```{r }
+y <- PTweight[6:10, 2]  # stress group data
+y.bar <- mean(y)
+s.p <- sqrt((4 * var(x) + 4 * var(y)) / 8)  # pooled sample sd
+x.bar - y.bar + c(-1, 1) * qt(0.975, df = 8) * s.p * sqrt(1 / 5 + 1 / 5)
+```
+The value $\mu_X - \mu_Y <- 0$ is inside the interval. Thus, there is not
+enough evidence in these data to claim that the  means in the two groups are
+different.
+
+Compare now with the result from `t.test()`.
+```{r }
+t.test(x, y, var.equal = TRUE)
+```
+
+Is it reasonable to assume that the two variances are the same in the two
+groups? This can be checked formally by computing a confidence interval for the
+variance ratio $\sigma^2_X/ \sigma^2_Y$  as follows:
+```{r }
+var.test(x, y)
+```
+Since the value $\sigma^2_X/ \sigma^2_Y=1$ is inside the CI, there is not
+enough evidence to suggest that the variances are unequal.
+
+
+# Comparing estimators by simulation
+
+Let $X_1,\dots,X_n$ be a random sample of size $n$ from a Poisson distribution
+with mean $\lambda$. Let $\bar{X}$ and $S^2$ denote the sample mean and sample
+variance, respectively. Note that both are unbiased estimators for $\lambda$
+since
+\[ \mathbb{E}(\bar{X}) = \mathbb{E}(S^2) = \lambda. \]
+
+While we already know that $\mathrm{var}(\bar{X}) = \lambda/n$ (recall how), an
+expression for $\mathrm{var}(S^2)$ is harder to compute. In such situations
+computer simulations can help us compare estimators. First let us check that
+the two estimators are unbiased.
+```{r }
+lambda <- 10
+B <- 1000  # simulation runs
+n <- 10    # sample size
+xbar <- 1:B  # we will collect results in these two vectors
+s2   <- 1:B
+for (b in 1:B) {  # repeat B times for b = 1,...,B
+    x <- rpois(n, lambda)
+    xbar[b] <- mean(x)  # compute and store X-bar
+    s2[b]   <- var(x)   # compute and store S^2
+}
+```
+The LLN for iid variables $Z_1,\dots,Z_B$ states that $B^{-1} \sum_{b=1}^B Z_b
+\rightarrow \mathbb{E}(Z_1)$ as $B \rightarrow \infty$. This can be used to
+approximate the $\mathbb{E}(\bar{X})$ and $\mathbb{E}(S^2)$ from our simulations
+as follows:
+```{r }
+mean(xbar)
+mean(s2)
+```
+Both estimators seem to be unbiased for $\lambda$.
+
+Using the LLN we can also approximate the variance of the two estimators as
+follows:
+```{r }
+var(xbar)
+var(s2)
+```
+While we already know that $\mathrm{var}(\bar{X}) = \lambda/n$, a more involved
+calculation shows that $\mathrm{var}(S^2) = [\lambda(2n\lambda + n - 1)] /
+[{n (n - 1)}]$.  The values obtained from the above simulation are quite close
+to these theoretical values:
+```{r }
+lambda / n
+lambda * (2 * n * lambda + n - 1) / (n * (n - 1))
+```
+Both estimators seem to be unbiased for $\lambda$ but the first estimator is
+clearly superior in terms of variance. Try different values of the true
+parameter $\lambda$ and $n$ in the above code and see what happens.  Also,
+check what happens when you increase $B$.
+
+Compare the accuracy of the estimators graphically, for example using boxplots.
+```{r fig.height=4, fig.width=6}
+boxplot(xbar, s2, names = c("X-bar", "S-squared"),
+        col = "lightblue", horizontal = TRUE)
+
+# Draw a dashed vertical line showing the true parameter value.
+abline(v = lambda, lty = 2, lwd = 2, col = "magenta")
+```
+
+From the box plots, the distribution of both estimators is clearly centred
+around the true $\lambda$, but the distribution of $\bar{X}$ has a much smaller
+spread. Note also that the distribution of $S^2$ is not symmetric.
+
+Load the invadopodia data. Assume a Poisson model with mean $\lambda_j$, $j
+= 1, \dots, 4$ with different means corresponding to treatment groups and
+estimate $\lambda_j$. For the first two groups we have:
+```{r }
+invadopodia <- read.table("invadopodia.txt")
+x1 <- invadopodia[invadopodia$Condition == 1, 2]
+x2 <- invadopodia[invadopodia$Condition == 2, 2]
+x.bar1 <- mean(x1)
+x.bar2 <- mean(x2)
+```
+
+Construct approximate 95\% confidence intervals for $\lambda$ recalling that
+$\hat{\lambda} = \bar{X}$ obeys the Central Limit Theorem.  Specifically,
+$\hat{\lambda} \approx \mathrm{N}(\lambda, \lambda/n)$, so approximate 95\%
+confidence intervals can be computed using:
+\[ \hat{\lambda}_j \pm 1.96 \times \sqrt{\frac{\hat{\lambda}_j}{n}}, \quad
+   j = 1, \dots, 4. \]
+```{r }
+# 95% CI for group 1.
+x.bar1 + c(-1, 1) * 1.96 * sqrt(x.bar1 / length(x1))
+# 95% CI for group 2.
+x.bar2 + c(-1, 1) * 1.96 * sqrt(x.bar2 / length(x2))
+```
+Note that the 1.96 in the above code gives 95\% confidence intervals. To
+compute 90\% or 99\% CIs, replace 1.96 by the appropriate standard normal
+quantiles:
+```{r }
+qnorm(0.95)   # use this to obtain a 90% CI
+qnorm(0.995)  # use this to obtain a 99% CI
+```
+
+The CIs do not overlap, suggesting that the two means are actually different.
+To carry out proper inference for the difference of means, $\lambda_1
+- \lambda_2$, we need to derive a specific CI.  Since the first two groups are
+independent we have,
+\[ \hat{\lambda}_1 - \hat{\lambda}_2 \approx 
+   \mathrm{N}\left(\lambda_1 - \lambda_2,
+           \frac{\lambda_1 }{n_1} + \frac{\lambda_2}{n_2}\right) \]
+
+```{r }
+# 95% CI for difference between groups 1 and 2.
+x.bar1 - x.bar2 + c(-1, 1) * 1.96 *
+    sqrt(x.bar1 / length(x1) + x.bar2 / length(x2))
+```
+
+The interval is clearly above the value $\lambda_1 - \lambda_2 = 0$, suggesting
+that the true difference is likely to be different from zero.  Hence, we
+conclude that we have evidence that the isopropile treatment reduces the number
+of susceptible cells in mice tissues.
+
+
+# Simulating discrete distributions
+
+The function `sample()` carries out sampling from a discrete
+distribution in a few different ways.  For example, to simulate 10 coin tosses
+you would use:
+```{r }
+sample(c("tails", "heads"), 10, replace = TRUE)
+```
+The first argument specifies the possible values to observe.  For example, we
+could pick a random day of the week using:
+```{r }
+days <- c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+sample(days, 1)
+```
+By default, all items are given equal probability.  This can be changed by
+specifying different values using the `prob` argument.  For example,
+biased coin tosses can be obtained with:
+```{r }
+sample(c("tails", "heads"), 10, prob = c(0.2, 0.8), replace = TRUE)
+```
+The vector passed to `prob` should have the same length as the set of
+possible values (the first argument).
+
+The argument `replace` specifies whether to do sampling with or without
+replacement^['Replacement' refers to putting the sampled item back into the
+pool of possible values before taking the next sample.].  The default is
+without replacement, which means we always need to write `replace = TRUE` to
+get iid samples.
+
+
+# Exercises
+
+1. Give estimates and 95\% CIs for $\lambda_3$ and $\lambda_4$.
+```{r }
+# Insert answer here...
+```
+
+2. The investigators are wondering whether isopropile treatment affects the
+number of susceptible cells in mice tissues when propile treatment is already
+provided.  What analysis answers that question?  Carry out this analysis.
+```{r }
+# Insert answer here...
+```
+
+3. Consider question 1 from the tutorial problems.  Derive a 75\% CI for the
+population mean.
+```{r }
+# Insert answer here...
+```
+
+4. Consider question 2 from the week 3 tutorial problems.  This involved
+a random sample of $n$ observations on $X$ having the following pmf:
+
+    | $x$    | 0            | 1              | 2            |
+    |:------:|:------------:|:--------------:|:------------:|
+    | $p(x)$ | $1 - \theta$ | $3 \theta / 4$ | $\theta / 4$ |
+
+    For the case of $n = 10$ and $\theta = 0.6$, use numerical simulations to
+    show:
+
+    a) $T_1 = (4 / 5) \bar{X}$ and $T_2 = 1- n^{-1} \sum_{i=1}^n I(X_i = 0)$
+    are unbiased
+    ```{r }
+    # Insert answer here...
+    ```
+
+    b) $\mathrm{var}(T_1) > \mathrm{var}(T_2)$
+    ```{r }
+    # Insert answer here...
+    ```

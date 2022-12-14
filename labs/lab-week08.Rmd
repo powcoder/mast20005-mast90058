@@ -1,0 +1,245 @@
+---
+title: "Week 8 Lab, MAST20005/MAST90058"
+author: "School of Mathematics and Statistics, University of Melbourne"
+date: "Semester 2, 2022"
+institute: "University of Melbourne"
+fontsize: 11pt
+classoption: a4paper
+output:
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+---
+
+**Goals:** (i) Practise various parametric and non-parametric tests for
+independent samples; (ii) Goodness-of-fit test; (iii) Association tests between
+categorical variables.
+
+**Data for the [Goodness-of-fit test] section:**  Butterfat data
+(`butterfat.txt`).  Measurements of the amount of butterfat (in pounds)
+produced by 90 cows during a 305-day milk production period following their
+first calf.  The data file can be obtained from the shared folder in the
+computer labs, or from the LMS.
+
+```{r echo=FALSE}
+set.seed(2339)
+```
+
+# Two-sample tests
+
+Let $X$ and $Y$ be, respectively, the blood volumes in milliliters of a male
+who is a paraplegic and participates in vigorous physical activities and of
+a male who is able-bodied and participates in everyday, ordinary activities.
+Assume $X \sim \mathrm{N}(\mu_X, \sigma_X^2)$ and $Y \sim \mathrm{N}(\mu_Y,
+\sigma_Y^2)$.  The following are observations on $X$ and $Y$:
+```{r }
+x <- c(1612, 1352, 1256, 922, 1560, 1456, 2324)
+y <- c(1082, 1300, 1092, 1040, 910 , 1248, 1092, 1040, 1092, 1288)
+```
+
+Test the null hypothesis $H_0\colon \mu_X = \mu_Y$ against the two-sided
+alternative $H_1\colon \mu_X \neq \mu_Y$ at the $\alpha = 0.05$ level of
+significance.
+```{r }
+t.test(x, y, var.equal = TRUE)
+```
+Since the p-value is smaller than $\alpha = 0.05$, we reject $H_0$ and conclude
+that there is sufficient evidence to show that the population means are the
+different.
+
+Let us check the assumptions for the above test.  Note that by using the
+option `var.equal = TRUE` we are assuming $\sigma_X = \sigma_Y$.  We can
+check this assumption by testing $H_0\colon \sigma_X = \sigma_Y$ against the
+alternative $H_1\colon \sigma_X \neq \sigma_Y$ as follows:
+```{r }
+var.test(x, y)
+```
+We reject $H_0$ at the usual significance level of 5\%.  We can see that there
+is substantial evidence that the two variances differ.
+
+A modification of the t-test known as Welch's test can help us correct
+for this problem by estimating both variances, and adjusting the degrees of
+freedom to use in the test.  (This is the default procedure, if we do not
+specify `var.equal = TRUE` argument.)
+```{r }
+t.test(x, y)
+```
+Now the p-value is larger than $\alpha = 0.05$, so we cannot reject $H_0\colon
+\mu_X = \mu_Y$. It turns out that our earlier test was too optimistic: once we
+factor in the additional uncertainty from estimating two unknown variances it
+is harder to reject the null hypothesis.
+
+Another assumption used in the t-test is normality. The following creates
+two normal QQ-plots:
+```{r fig.width=6, fig.height=4}
+par(mfrow = c(1, 2))
+qqnorm(x, main = "X", col = 4)
+qqline(x, lty = 2)
+qqnorm(y, main = "Y", col = 4)
+qqline(y, lty = 2)
+```
+In the $X$ sample there is a potential outlier in the right tail of the
+distribution, suggesting some degree of incompatibility with the normality
+assumption.  The $Y$ sample shows other deviations from the straight line.
+
+The previous analyses suggest that a distribution-free test could suit
+these data better than the t-test. Consider a two-sample Wilcoxon test for the
+null hypothesis $H_0\colon m_X = m_Y$ (population medians are equal) against
+the alternative $H_0\colon m_X \neq m_Y$.
+```{r }
+# Wilcoxon test with normal approximation
+wilcox.test(x, y, exact = FALSE)
+```
+The option `exact` specifies whether we wish to use a normal
+approximation for the distribution of the test statistic instead of the exact
+distribution.
+
+The Wilcoxon test is said to be a robust test because outliers do not
+affect its results very much.  For example, replace the smallest observation in
+the $X$ sample by some more extreme number.  What happens to the p-value?
+```{r results='hide'}
+y2 <- y
+y2[5] <- 470
+wilcox.test(x, y2, exact = FALSE)
+```
+
+
+# Goodness-of-fit test
+
+Consider the butterfat dataset.  Let $X$ be the amount of butterfat.  Let's
+test the hypothesis that $X \sim \mathrm{N}(\mu, \sigma^2)$.
+
+We first need to fit the model. To this end, compute the sample mean
+$\bar{x}$ and standard deviation $s_x$.
+```{r }
+butterfat <- read.table("butterfat.txt")[, 1]
+x.bar <- mean(butterfat)
+s <- sd(butterfat)
+```
+
+Next, partition the data into a few discrete classes and compute observed
+frequencies.
+```{r }
+b <- c(0, seq(374, 624, 50), 1000)      # class boundaries
+O <- table(cut(butterfat, breaks = b))  # observed counts
+O
+```
+
+We could compute expected frequencies using:
+
+    prob <- rep(0, 7)
+    prob[1] <- pnorm(b[2], x.bar, s) - pnorm(b[1], x.bar, s)
+    ...
+    prob[7] <- pnorm(b[8], x.bar, s) - pnorm(b[7], x.bar, s)
+    E <- prob * length(butterfat)
+
+Let's package this up into a loop:
+```{r }
+prob <- rep(0, 7)
+for (k in 1:7)
+    prob[k] <- pnorm(b[k + 1], x.bar, s) - pnorm(b[k], x.bar, s)
+E <- prob * length(butterfat)  # expected frequencies
+```
+and then carry out the test:
+```{r }
+C <- sum((O - E)^2 / E)  # chi-squared statistic
+d1 <- length(O)          # number of classes
+qchisq(0.95,  d1 - 3)    # critical value
+1 - pchisq(C, d1 - 3)    # p-value
+cbind(O, E)
+```
+
+We could also conduct the chi-squared test using:
+```{r }
+chisq.test(O, p = prob)
+```
+but we need to remember that the final degrees of freedom should be $k
+- p - 1$, where $k$ is the number of classes and $p$ the number of estimated
+parameters.  That means we need to recalculate the p-value using the given
+value of the statistic and the correct degrees of freedom:
+```{r }
+1 - pchisq(1.0144, d1 - 3)
+```
+
+Have a go at using the `qqnorm()` function to illustrate your result.
+
+
+# Chi-squared test for association
+
+The following data describe the state of grief for a sample of mothers who had
+suffered a neonatal death. The table relates this to the amount of support
+given to these women:
+
+| Grief state | Good support | Adequate support | Poor support |
+|:-----------:|-------------:|-----------------:|-------------:|
+|     I       |     171      |        93        |       82     |
+|     II      |      62      |        54        |       11     |
+|     III     |      31      |        55        |       43     |
+|     IV      |      11      |        27        |       57     |
+
+We enter these data in R as follows:
+```{r }
+X.raw <- c(171, 93, 82, 62, 54, 11, 31, 55, 43, 11, 27, 57)
+X     <- matrix(X.raw, nrow = 4, byrow = TRUE)
+test  <- chisq.test(X)
+test
+```
+The p-value is very small so we reject the null hypothesis that the rows and
+columns are independent.  Hence, we conclude that we have strong evidence that
+the amount of support is associated with the grief state of mothers.
+
+The following shows the expected frequencies:
+```{r }
+test$expected
+```
+In R, show how to compute the first cell in the table of expected frequencies
+and give the first term in the chi-squared statistic:
+```{r }
+E.1 <- sum(X[, 1]) * sum(X[1, ]) / sum(X)
+E.1
+O.1 <- 171
+(O.1 - E.1)^2 / E.1
+```
+
+
+# Exercises
+
+Do each of the tutorial problems but now using R.
+
+1. Do question 1 from the tutorial problems.
+```{r }
+# Insert answer here...
+```
+
+2. Do question 2 from the tutorial problems.
+
+    a)
+    ```{r }
+    # Insert answer here...
+    ```
+
+    b)
+    ```{r }
+    # Insert answer here...
+    ```
+
+    c)
+    ```{r }
+    # Insert answer here...
+    ```
+
+    d)
+    ```{r }
+    # Insert answer here...
+    ```
+
+3. Do question 3 from the tutorial problems.
+```{r }
+# Insert answer here...
+```
+
+4. Do question 4 from the tutorial problems.
+```{r }
+# Insert answer here...
+```
